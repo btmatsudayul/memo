@@ -3,16 +3,15 @@
 
 - [JWT](#jwt)
     - [ID Token](#id-token)
-    - [Client Assertion](#client-assertion)
     - [UserInfo Response](#userinfo-response)
     - [Request Object](#request-object)
     - [Aggregated Claims](#aggregated-claims)
+    - [Client Authentication](#client-authentication)
     - [Summary](#summary)
 - [Flow](#flow)
     - [Authentication using the Authorization Code Flow](#authentication-using-the-authorization-code-flow)
     - [Authentication using the Implicit Flow](#authentication-using-the-implicit-flow)
     - [Authentication using the Hybrid Flow](#authentication-using-the-hybrid-flow)
-- [Client Authentication](#client-authentication)
 
 <!-- /TOC -->
 
@@ -20,11 +19,21 @@
 
 OpenID Connectにおける主なJWTの利用用途は以下の通り。
 
-  - [ID Token](#id-token)
-  - [Client Assertion](#client-assertion)
+  - [ID Token](#id-token) 
+    - Token Response時の追加パラメータ
+    - [OIDC 2.ID Token](http://openid-foundation-japan.github.io/openid-connect-core-1_0.ja.html#IDToken)
   - [UserInfo Response](#userinfo-response)
-  - [Aggregated Claims](#aggregated-claims)
+    - UserInfo EndpoitからのResponse（⇒
+    - [OIDC 5.3. UserInfo Endpoint](http://openid-foundation-japan.github.io/openid-connect-core-1_0.ja.html#UserInfo)
   - [Request Object](#request-object)
+    - Authorization Request時の追加パラメータ
+    - [OIDC 5.5. Requesting Claims using the "claims" Request Parameter](http://openid-foundation-japan.github.io/openid-connect-core-1_0.ja.html#ClaimsParameter)
+  - [Aggregated Claims](#aggregated-claims) ・・・
+    - Claimsの種別
+    - [OIDC 5.6. Claim Types](http://openid-foundation-japan.github.io/openid-connect-core-1_0.ja.html#ClaimTypes)
+  - [Client Authentication](#client-authentication)
+    - Token Resquest時のクライアント認証
+    - [OIDC 9. Client Authentication](http://openid-foundation-japan.github.io/openid-connect-core-1_0.ja.html#ClientAuthentication)
 
 ### ID Token
 
@@ -63,18 +72,6 @@ OpenID Connectにおける主なJWTの利用用途は以下の通り。
   }
 ```
 
-### Client Assertion
-
-[概要]
-  - ClientがToken Endpointにアクセスする際、自信を認証する（Cilent Authentication :`client_secret_jwt`または`private_key_jwt`）際にJWTを利用する。
-
-  - **TODO ： 詳細不明。引き続き調査。**
-
-[利用目的]
-
-[電文例]
-
-
 ### UserInfo Response
 
 [概要]
@@ -82,7 +79,6 @@ OpenID Connectにおける主なJWTの利用用途は以下の通り。
   - Clientは、Acccess Tokenを用いてUserInfo Endpointに要求することでUserInfo Responseを取得する。
     - OAuth 2.0でいうところの、Resource ServerからのResponseのユーザ情報版。
   - UserInfo Responseが署名、または暗号化されている場合はJWT、署名、または暗号化されていない場合はJSONにて返却する。
-    - [OIDC 5.3. UserInfo Endpoint](http://openid-foundation-japan.github.io/openid-connect-core-1_0.ja.html#UserInfo)
 
 
 [利用目的]
@@ -181,11 +177,10 @@ OpenID Connectにおける主なJWTの利用用途は以下の通り。
 
   - OpenID ProviderとしてはNormal Claimsのみ対応が必須。
   - Claims Provider：Claimを管理しているサーバ。
-  - [OIDC 5.6. Claim Types](http://openid-foundation-japan.github.io/openid-connect-core-1_0.ja.html#ClaimTypes)
 
 [利用目的]
 
-  - ①：OpenID ProviederのProxy化
+  - ①：OpenID Proviederを通じて、Claims ProviderのClaimの返却など（OPのProxy化）
     - OpenID Provider：API-GW、Claims Provider：既存の認証サーバとなるような構成、かつOpenID ProviderではClaims Providerからの応答（JWT）をそのまま流したいなど？
 
 ```
@@ -243,6 +238,43 @@ OpenID Connectにおける主なJWTの利用用途は以下の通り。
               "access_token": "ksj3n283dke"}
    }
   }
+```
+
+### Client Authentication
+
+[概要]
+  - ClientがToken Endpointにアクセスする際、自身を認証する方式。
+  - OpenID Connectでは、従来の方式（Basic認証等）に加えて、JWTの連携による認証方式の指定が可能となっている。
+  - client_secret_jwt、private_key_jwtの必要パラメータについてはRFC参照。
+
+**Client Authentication方式**
+
+|Type               |説明             |備考  |
+|:------------------|:---------------|:----|
+|client_secret_basic|`client_secret`をHTTP Basic 認証スキーマを利用して自身を認証する |  |
+|client_secret_post |`client_secret`をリクエストボディに含めて自身を認証する |Client Credential方式？ |
+|client_secret_jwt  |HMAC SHA-256等のHMAC SHAアルゴリズムを利用し、`client_secret`を共通鍵として作成したJWTにて自身を認証する |JWT Bearer Tokenを利用 |
+|private_key_jwt    |事前に交換済みの秘密鍵で署名したJWTにて自身を認証する |JWT Bearer Tokenを利用 |
+|none               |認証しない         |Implicit FlowまたはPublicなClientなど |
+
+[利用目的]
+
+  - OpenID Conenctでは
+    - Public Client：指定なし（none？他の代替手段で認証する？）
+    - Confidential Client：client_secret_jwt or private_key_jwt
+
+[電文例]
+```
+  POST /token HTTP/1.1
+  Host: server.example.com
+  Content-Type: application/x-www-form-urlencoded
+
+  grant_type=authorization_code&
+    code=i1WsRn1uB1&
+    client_id=s6BhdRkqt3&
+    client_assertion_type=
+    urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer&
+    client_assertion=PHNhbWxwOl ... ZT
 ```
 
 ### Summary
@@ -319,14 +351,3 @@ OpenID Connectにおける主なJWTの利用用途は以下の通り。
   8. Clientは ID Token をトークンを検証し, End-User の Subject Identifier を取得する. 
 
 [利用目的]
-
-
-
-## Client Authentication
-
- - ClientがConfidentialである場合、Token Endpointにアクセスする際、
-   自身の認証方式に沿った方法で認証を行わなければならない。
-   
- [TODO](http://openid-foundation-japan.github.io/openid-connect-core-1_0.ja.html#ClientAuthentication)
-
-  

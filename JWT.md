@@ -141,6 +141,8 @@
   <指定なし("alg":"none"のため、JWS Signatureがなし)>
 ```
 
+---
+
 ## JWT Claims
 
   - **TODO : OpenID Connect内容をベースに記載内容見直し中！！！**
